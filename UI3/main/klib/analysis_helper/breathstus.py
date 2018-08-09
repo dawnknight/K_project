@@ -2,7 +2,7 @@ import numpy as np
 from scipy.signal import argrelextrema
 from scipy.ndimage.filters import gaussian_filter as gf_2D
 from scipy.ndimage.filters import gaussian_filter1d as gf
-from .initial_param.kinect_para import Kinect_para
+from ..initial_param.kinect_para import Kinect_para
 import inflect
 import pdb
 
@@ -240,8 +240,8 @@ class Breath_status(object):
                 if np.abs(self.max_ary[-1, 1] - self.min_ary[-1, 1]) < 30:
                     self.evalstr = 'Please breathe deeper.\n'
                     self.eval = 'Please breathe deeper.\n'
-                    self.err.append('The '+self.cnvt.ordinal(self.cnt+1)+ ' time try, is not deep enough.')
-                    self.errsum.append('Breathing is not deep enough.\n')
+                    self.err.append('At the '+self.cnvt.ordinal(self.cnt+1)+ ' time try, is not deep enough.')
+                    self.errsum.append('Breathing is not deep enough.')
         self.max_len = self.max_ary.shape[0]
         self.min_len = self.min_ary.shape[0]
 

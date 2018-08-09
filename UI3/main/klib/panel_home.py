@@ -5,13 +5,14 @@ import numpy as np
 import pandas as pd
 import wx.media
 import matplotlib
+import collections
 from matplotlib.figure import Figure
-from collections import defaultdict
 import wx.lib.mixins.inspection as WIT
+import wx.lib.calendar
 
 import sys, math, os
 import random
-from datetime import datetime
+import datetime
 
 matplotlib.use('WXAgg')
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
@@ -30,6 +31,7 @@ class Welcome_win(wx.Frame):
         self.font_text_title = wx.Font(24, wx.DEFAULT, wx.NORMAL, wx.FONTWEIGHT_BOLD, False, 'Arial')
         self.info = info
         self.game = None
+        self.path = './output/log.xlsx'
 
         self.width, self.height = wx.GetDisplaySize()
         self.height -= 100
@@ -49,28 +51,27 @@ class Welcome_win(wx.Frame):
 
         # sizers
         combine = wx.GridBagSizer(self.sizer_w, self.sizer_h)
-        topSizer = wx.BoxSizer(wx.VERTICAL)
-        titleSizer = wx.GridBagSizer(self.sizer_w, self.sizer_h)
-        lineSizer = wx.GridBagSizer(self.sizer_w, self.sizer_h)
-        buttonSizer = wx.GridBagSizer(self.sizer_w, self.sizer_h)
-        menuSizer = wx.BoxSizer(wx.VERTICAL)
-        dailySizer = wx.GridBagSizer(self.sizer_w, self.sizer_h)
-        infoSizer = wx.GridBagSizer(self.sizer_w, self.sizer_h)
+        top_sizer = wx.BoxSizer(wx.VERTICAL)
+        title_sizer = wx.GridBagSizer(self.sizer_w, self.sizer_h)
+        line_sizer = wx.GridBagSizer(self.sizer_w, self.sizer_h)
+        button_sizer = wx.GridBagSizer(self.sizer_w, self.sizer_h)
+        menu_sizer = wx.BoxSizer(wx.VERTICAL)
+        info_sizer = wx.GridBagSizer(self.sizer_w, self.sizer_h)
 
         # title
         text = wx.StaticText(self.panel, label="LymphCoach")
         text.SetFont(self.font_title)
-        topSizer.Add(text, 0, wx.CENTER)
+        top_sizer.Add(text, 0, wx.CENTER)
 
         line = wx.StaticLine(self.panel)
-        lineSizer.Add(line, pos=(0, 0), span=(2, int(self.width/self.sizer_w/2)), flag=wx.EXPAND|wx.BOTTOM)
+        line_sizer.Add(line, pos=(0, 0), span=(2, int(self.width/self.sizer_w/2)), flag=wx.EXPAND|wx.BOTTOM)
 
         if self.info.isPat:
             text1 = wx.StaticText(self.panel, label='Hi ' + self.info.fname + '! How\'s your day!')
         elif self.info.isCli:
             text1 = wx.StaticText(self.panel, label='Hi ' + self.info.fcname + '! How\'s your day!')
         text1.SetFont(self.font)
-        titleSizer.Add(text1, pos=(1, 0))
+        title_sizer.Add(text1, pos=(1, 0))
 
         button_size = (300, 50)
 
@@ -93,13 +94,57 @@ class Welcome_win(wx.Frame):
         button4.SetFont(self.font)
         button4.Bind(wx.EVT_BUTTON, self.open_history)
 
-        buttonSizer.Add(button1, pos=(1, 0))
-        # buttonSizer.Add(button2, pos=(2, 0))
-        buttonSizer.Add(button3, pos=(2, 0))
-        buttonSizer.Add(button4, pos=(3, 0))
-        menuSizer.Add(menu_title, 0, wx.CENTER)
-        menuSizer.Add(buttonSizer, 0, wx.CENTER)
+        button_sizer.Add(button1, pos=(1, 0))
+        # button_sizer.Add(button2, pos=(2, 0))
+        button_sizer.Add(button3, pos=(2, 0))
+        button_sizer.Add(button4, pos=(3, 0))
+        menu_sizer.Add(menu_title, 0, wx.CENTER)
+        menu_sizer.Add(button_sizer, 0, wx.CENTER)
 
+        calendar_sizer = self.setupCalend()
+        sentence_sizer = self.setupSentence()
+        info_sizer.Add(menu_sizer, pos=(1, 0))
+
+        newline = wx.StaticLine(self.panel)
+        info_sizer.Add(newline, pos=(1, 2), span=(2, 2), flag=wx.EXPAND)
+        info_sizer.Add(calendar_sizer, pos=(1, 5))
+        info_sizer.Add(sentence_sizer, pos=(1, 7))
+
+        top_sizer.Add(line_sizer, 0, wx.CENTER)
+        top_sizer.Add(title_sizer, 0, wx.CENTER)
+        top_sizer.Add(info_sizer, 0, wx.CENTER)
+        combine.Add(top_sizer, pos=(2, 0))
+        self.panel.SetSizer(combine)
+
+    def open_bodygame(self, event):
+        self.game = bodygame3.BodyGameRuntime(self.info)
+        self.game.run()
+
+    def open_instruction(self, event):
+        instruct = Instrcution_win(None, 'Instruction')
+
+    def open_history(self, event):
+        history = History_view(None, self.info, self.path)
+
+    def open_trainingmode(self, event):
+        self.train = trainingmode.BodyGameRuntime()
+        self.train.run()
+
+    def OnEraseBackground(self, evt):
+        """
+        Add a picture to the background
+        """
+        dc = evt.GetDC()
+        if not dc:
+            dc = wx.ClientDC(self)
+            rect = self.GetUpdateRegion().GetBox()
+            dc.SetClippingRect(rect)
+        dc.Clear()
+        bmp = wx.Bitmap("./data/bkimgs/BUMfk9.jpg")
+        dc.DrawBitmap(bmp, 0, 0)
+
+    def setupSentence(self):
+        sentence_sizer = wx.GridBagSizer(self.sizer_w, self.sizer_h)
 
         # http://optimallymph.org/en/login?destination=lymphedema
         self.sentences = ["I like the exercises!!! After I finished learning the exercises by following the videos, my pain and soreness were much better.",
@@ -136,50 +181,148 @@ class Welcome_win(wx.Frame):
                             "I am doing the right exercise (breathing and pumping) on the daily basis. I feel good and I feel that I owe it to myself.",
                             "Being aware of factors that contribute to developing lymphedema and specific measures to alleviate symptoms has been instrumental in reducing any swelling. I have experienced and have motivated/aware of making choice to reduce my risk."]
 
+
         sentence_title = wx.StaticText(self.panel, label="Daily Empowerment")
         sentence_title.SetFont(self.font_text_title)
-        random.seed(datetime.now())
-        sentence = wx.StaticText(self.panel, label=self.sentences[random.randrange(len(self.sentences))], size=(500, 300))
-        sentence.SetFont(self.font_text)
-        dailySizer.Add(sentence_title, pos=(0, 0))
-        dailySizer.Add(sentence, pos=(2, 0))
+        sentence_sizer.Add(sentence_title, pos=(0, 0))
 
-        infoSizer.Add(menuSizer, pos=(1, 0))
-        infoSizer.Add(dailySizer, pos=(1, 4))
+        random.seed(datetime.datetime.now())
+        randoms = random.sample(range(len(self.sentences)), 6)
+        sentence = ''
+        for i in randoms:
+            if (len(sentence) < 350):
+                sentence += self.sentences[i] + '\n\n'
+            else:
+                break
 
-        topSizer.Add(lineSizer, 0, wx.CENTER)
-        topSizer.Add(titleSizer, 0, wx.CENTER)
-        topSizer.Add(infoSizer, 0, wx.CENTER)
-        combine.Add(topSizer, pos=(2, 0))
-        self.panel.SetSizer(combine)
+        sentence_text = wx.StaticText(self.panel, label=sentence, size=(500, 300))
+        sentence_text.SetFont(self.font_text)
+
+        sentence_sizer.Add(sentence_text, pos=(2, 0))
+        return sentence_sizer
 
 
-    def open_bodygame(self, event):
-        self.game = bodygame3.BodyGameRuntime(self.info)
-        self.game.run()
+    def setupCalend(self):
+        calend_sizer = wx.GridBagSizer(self.sizer_w, self.sizer_h)
 
-    def open_instruction(self, event):
-        instruct = Instrcution_win(None, 'Instruction')
+        calendar_title = wx.StaticText(self.panel, label="Current Streak")
+        calendar_title.SetFont(self.font_text_title)
+        calend_sizer.Add(calendar_title, pos=(0, 0))
 
-    def open_history(self, event):
-        history = History_view(None, self.info)
+        history_max, cur_streak = self.dailyStreak()
+        streak_text = wx.StaticText(self.panel, label="Current Streak: %d\nHistorical best: %d" % (cur_streak, history_max))
+        streak_text.SetFont(self.font_text)
+        calend_sizer.Add(streak_text, pos=(2, 0))
 
-    def open_trainingmode(self, event):
-        self.train = trainingmode.BodyGameRuntime()
-        self.train.run()
+        self.initCalend()
 
-    def OnEraseBackground(self, evt):
-        """
-        Add a picture to the background
-        """
-        dc = evt.GetDC()
-        if not dc:
-            dc = wx.ClientDC(self)
-            rect = self.GetUpdateRegion().GetBox()
-            dc.SetClippingRect(rect)
-        dc.Clear()
-        bmp = wx.Bitmap("./data/bkimgs/BUMfk9.jpg")
-        dc.DrawBitmap(bmp, 0, 0)
+        calend_sizer.Add(self.date, pos=(3, 0))
+        calend_sizer.Add(self.calend, pos=(4, 0))
+
+        return calend_sizer
+
+
+    def dailyStreak(self):
+        sheets = pd.read_excel(self.path, sheet_name=None)
+        # dictionary that stores time & number of finished exercises
+        self.sheet_dict = {}
+        for (key, val) in sheets.items():
+            # get 'time' column from each sheet
+            time = np.array(val[val['name'] == self.info.name]['time'])
+            time = np.unique([i.split('-')[:-2] for i in time], axis=0)
+            unique_time = []
+            for i in range(len(time)):
+                concat = ''
+                for j in time[i]:
+                    concat += j + '-'
+                unique_time.append(datetime.datetime.strptime(concat, '%Y-%m-%d-'))
+            for i in range(len(unique_time)):
+                if (unique_time[i] in self.sheet_dict):
+                    self.sheet_dict[unique_time[i]] += 1
+                else:
+                    self.sheet_dict[unique_time[i]] = 1
+        self.sheet_dict = list(collections.OrderedDict(sorted(self.sheet_dict.items())).items())
+
+        # currently: streak: finish at least 1 exercise (instead of finish all 7)
+        history_max = []
+        for i in range(0, len(self.sheet_dict)-1):
+            if ((self.sheet_dict[i+1][0] - self.sheet_dict[i][0]).days == 1):
+                temp_max = 2
+                i += 1
+                while (i < len(self.sheet_dict)-1):
+                    if ((self.sheet_dict[i+1][0] - self.sheet_dict[i][0]).days == 1):
+                        temp_max += 1
+                        i += 1
+                    else:
+                        break
+                history_max.append(temp_max)
+            else:
+                history_max.append(1)
+
+        if (self.sheet_dict[-1][0] == datetime.datetime.strptime(datetime.datetime.now().strftime('%Y-%m-%d'), '%Y-%m-%d')):
+            return (max(history_max), history_max[-1])
+        else:
+            return (max(history_max), 0)
+
+    def recentStreak(self):
+        # a week from current date to be displayed
+        pre = datetime.datetime.strptime(datetime.datetime.now().strftime('%Y-%m-%d'), '%Y-%m-%d') + datetime.timedelta(-7)
+        cur = pre + datetime.timedelta(7)
+        cur_dict = {}
+        while (pre <= cur):
+            cur_dict[pre] = 0
+            pre += datetime.timedelta(1)
+
+        for i in range(len(self.sheet_dict)):
+            if (self.sheet_dict[i][0] in cur_dict):
+                cur_dict[self.sheet_dict[i][0]] = 1
+
+
+    def initCalend(self):
+        self.calend_days = {i: [] for i in range(1, 13)}
+        for i in range(len(self.sheet_dict)):
+            self.calend_days[self.sheet_dict[i][0].month].append(self.sheet_dict[i][0].day)
+
+        self.calend = wx.lib.calendar.Calendar(self.panel, size=(250, 200))
+        start_month = self.calend.GetMonth()
+        start_year = self.calend.GetYear()
+        self.calend.SetMonth(start_month)
+        self.calend.SetYear(start_year)
+
+        self.calend_select = self.calend_days[start_month]
+        self.calend.AddSelect(self.calend_select, 'WHITE', wx.Colour(0, 90, 106, 255))
+        self.calend.SetSelDay([self.calend.GetDay()])
+        self.calend.Refresh()
+
+        month = [wx.lib.calendar.Month[i] for i in range(1, 13)]
+        self.date = wx.ComboBox(self.panel, size=(90, -1), choices=month)
+        self.date.SetSelection(start_month-1)
+        self.Bind(wx.EVT_COMBOBOX, self.selectDate, self.date)
+
+        # self.calend.hide_title = True
+        self.calend.HideGrid()
+        self.calend.SetWeekColor('BLACK', 'WHITE')
+        self.ResetDisplay()
+
+    def selectDate(self, event):
+        monthval = self.date.FindString(event.GetString())
+        self.calend.SetMonth(monthval+1)
+
+        if ((monthval+1) == datetime.datetime.now().month):
+            self.calend.SetSelDay([self.calend.GetDay()])
+        else:
+            self.calend.SetSelDay([])
+
+        self.ResetDisplay()
+
+    def ResetDisplay(self):
+        # reset highlighted color
+        self.calend.AddSelect(self.calend_select, 'BLACK', 'WHITE')
+        set_days = self.calend_days[self.calend.GetMonth()]
+        self.calend.AddSelect(set_days, 'WHITE', wx.Colour(0, 90, 106, 255))
+        self.calend.Refresh()
+
+        self.calend_select = set_days
 
 
 class Instrcution_win(wx.Frame):
@@ -256,7 +399,7 @@ class Instrcution_win(wx.Frame):
 
 
     def init_text(self):
-        self.str = defaultdict(dict)
+        self.str = collections.defaultdict(dict)
         self.str['exe'][1] = 'Exercise 1 : Muscle Tighting Deep Breathing'
         self.str['exe'][2] = 'Exercise 2 : Over The Head Pumping'
         self.str['exe'][3] = 'Exercise 3 : Push Down Pumping'
@@ -490,13 +633,13 @@ class MoviePanel(wx.Panel):
 
 
 class History_view(wx.Frame):
-    def __init__(self, parent, info, title='history log'):
+    def __init__(self, parent, info, path, title='history log'):
 
         self.width, self.height = wx.GetDisplaySize()
         self.height -= 100
         self.sizer_w = 5
         self.sizer_h = 5
-        self.sub_width = 260
+        self.sub_width = 330
 
         super(History_view, self).__init__(parent, title=title, size=(self.width, self.height))
         isz = (16, 16)
@@ -504,22 +647,33 @@ class History_view(wx.Frame):
         self.SetIcon(ico)
 
         self.info = info
+        self.path = path
+        self.label = {
+            1: 'depth (mm)',
+            2: 'depth (mm)',
+            3: 'angle (degree)',
+            4: 'angle (degree)',
+            5: 'angle (degree)',
+            6: 'depth (mm)',
+            7: 'time (s)',
+        }
         self.no_hist_img = cv2.imread('./data/imgs/others/no_hist.jpg')
         self.init_ui()
         self.color_correct = (0.41, 0.75, 0.07, 0.6)
-        self.color_line = ['#0096BF', '#005A73', '#BFA600', '#736400', '#ffae25', '#af7900', '#d957b4', '#75005b']
+        # self.color_line = ['#0096BF', '#005A73', '#BFA600', '#736400', '#ffae25', '#af7900', '#d957b4', '#75005b']
+        self.color_line = [(174./255, 1, 0, 0.6), (139./255, 204./255, 0, 0.6), (87./255, 127./255, 0, 0.6), (99./255, 127./255, 38./255, 0.6)]
+        self.font = {'family': 'serif', 'color':  '#000000', 'weight': 'normal', 'size': 10}
         self.Show()
 
-    def init_ui(self, path='./output/log.xlsx'):
+    def init_ui(self):
         self.font = wx.Font(15, wx.DEFAULT, wx.NORMAL, wx.NORMAL, False)
-        self.path = path
         try:
-            log_xl = pd.ExcelFile(path)
+            log_xl = pd.ExcelFile(self.path)
         except:
             print('log file do not exist, creating a new one')
             hist = Historylog()
             hist.newlog()
-            log_xl = pd.ExcelFile(path)
+            log_xl = pd.ExcelFile(self.path)
 
         self.panel = wx.Panel(self)
 
@@ -595,9 +749,14 @@ class History_view(wx.Frame):
         # self.df.fillna(0, inplace=True)
         self.lst.Clear()
         lst_choice = self.df.columns.values.tolist()
-        idx_1 = [i for i, elem in enumerate(lst_choice) if 'time' in elem][0] + 1
-        idx_2 = [i for i, elem in enumerate(lst_choice) if 'errmsg' in elem][0]
-        self.lst.InsertItems(lst_choice[idx_1:idx_2], 0)
+        index_1 = -1
+        index_2 = -1
+        for (i, elem) in enumerate(lst_choice):
+            if index_1 == -1 and 'time' in elem:
+                index_1 = i
+            if index_2 == -1 and 'errmsg' in elem:
+                index_2 = i
+        self.lst.InsertItems(lst_choice[index_1+1:index_2], 0)
         self.lst.InsertItems(["Overall score"], 0)
         if (self.info.isCli):
             self.update_name_list_cli()
@@ -610,7 +769,7 @@ class History_view(wx.Frame):
         self.cur_choice = self.name.GetStringSelection()
 
     def update_name_cli(self, event):
-        self.cur_choice = self.name.GetStringSelection()
+        self.cur_choice = self.lst.GetStringSelection()
         if self.lst.GetStringSelection() != '':
             self.update_figure_cli()
 
@@ -644,6 +803,9 @@ class History_view(wx.Frame):
         # get total score for each day
         for i in range(1, len(list)):
             y = np.array(df_name[list[i]])
+            if (y.size == 0 or y.size == 1):
+                raise ValueError('No data to be processed')
+
             # self.debug(y)
             y = np.reshape(y, (len(y), 1))
             y_min, y_max = self.find_min_max(y)
@@ -674,13 +836,16 @@ class History_view(wx.Frame):
 
         y = total_score * 100
         x = np.arange(0, len(y))
-        self.axes.plot(x, y, color=self.color_line[0])
+        self.axes.plot(x, y, marker='o', markersize=5, color='#0096BF')
+        # self.axes.plot(x, y, color=self.color_line[0])
         self.axes.set_xticks(x)
         # self.debug(y)
 
+        self.axes.set_ylabel('score (0, 100)')
+        self.axes.set_xlabel('date (mm/dd)')
+
         y_min, y_max = self.find_min_max(y)
-        # print(y_min, y_max)
-        self.axes.set_ylim(y_min[0] - 5, y_max[0] + 5)
+        self.axes.set_ylim(0, 110)
 
         x_name = np.array([x.split("-") for x in df_name['time']])
         x_name = np.array([(x[1] + "/" + x[2]) for x in x_name])
@@ -691,6 +856,29 @@ class History_view(wx.Frame):
             else:
                 prev_index = i
         self.axes.set_xticklabels(x_name, rotation=20, fontsize=6)
+
+        ranges = []
+        for i in range(4):
+            cur = 100 - 100 * i * 0.25
+            ranges.append(cur)
+        texts = {}
+        for i in range(len(ranges)):
+            if (i == 0):
+                texts[ranges[i]] = ['Outstanding', self.font, 10.]
+            elif (i == 1):
+                texts[ranges[i]] = ['Excellent', self.font, 30.]
+            elif (i ==2):
+                texts[ranges[i]] = ['Good', self.font, 30.]
+            else:
+                texts[ranges[i]] = ['Moderate', self.font, 30.]
+
+        texts = collections.OrderedDict(sorted(texts.items(), reverse=True))
+        i = 0
+        for first, second in texts.items():
+            self.axes.text(1, first, second[0], fontdict=second[1])
+            self.axes.axhline(first, color=self.color_line[i], linestyle='-', linewidth=10)
+            i += 1
+
         self.canvas.draw()
 
     # general drawing function
@@ -700,10 +888,13 @@ class History_view(wx.Frame):
 
         self.axes.set_xticks(x)
         self.axes.set_title("Patient: " + name + "\n" + item)
-        if (y.size == 1):
-            self.axes.plot(x, y, marker='o', markersize=3, color="red")
+
+        if (y.size == 0):
+            raise ValueError('No data to be processed')
+        elif (y.size == 1):
+            self.axes.plot(x, y, marker='o', markersize=5, color="red")
         else:
-            self.axes.plot(x, y, color=self.color_line[0])
+            self.axes.plot(x, y, marker='o', markersize=5, color='#0096BF')
 
         y_min, y_max = self.find_min_max(y)
         y_span = y_max - y_min
@@ -713,7 +904,11 @@ class History_view(wx.Frame):
         else:
             cri = y_max - y_span * 0.1
 
-        self.axes.axhline(cri, color=self.color_correct, linestyle='-', linewidth=30)
+        reverse = False
+        if ((df_ideal[item].dtype == float) and (abs(y_min - df_ideal[item][0]) < abs(y_max - df_ideal[item][0]))):
+            reverse = True
+
+        # self.axes.axhline(cri, color=self.color_correct, linestyle='-', linewidth=30)
         self.axes.set_ylim(min(y_min, cri) - 10, max(y_max, cri) + 10)
 
         x_name = np.array([a.split("-") for a in df_name['time']])
@@ -725,6 +920,37 @@ class History_view(wx.Frame):
             else:
                 prev_index = i
         self.axes.set_xticklabels(x_name, rotation=20, fontsize=6)
+
+        self.axes.set_ylabel(self.label[self.choice.GetSelection()+1])
+        self.axes.set_xlabel('date (mm/dd)')
+
+        ranges = []
+        for i in range(4):
+            cur = cri - y_span * i * 0.25
+            if reverse:
+                cur = cri + y_span * i * 0.25
+            ranges.append(cur)
+
+        texts = {}
+        for i in range(len(ranges)):
+            if (i == 0):
+                texts[ranges[i]] = ['Outstanding', self.font, 10.]
+            elif (i == 1):
+                texts[ranges[i]] = ['Excellent', self.font, 30.]
+            elif (i ==2):
+                texts[ranges[i]] = ['Good', self.font, 30.]
+            else:
+                texts[ranges[i]] = ['Moderate', self.font, 30.]
+
+        if not reverse:
+            texts = list(collections.OrderedDict(sorted(texts.items(), reverse=True)).items())
+        else:
+            texts = list(collections.OrderedDict(sorted(texts.items())).items())
+
+        for i in range(len(texts)):
+            self.axes.text(1, texts[i][0], texts[i][1][0], fontdict=texts[i][1][1])
+            self.axes.axhline(texts[i][0], color=self.color_line[i], linestyle='-', linewidth=10)
+
         self.canvas.draw()
 
 
@@ -733,43 +959,31 @@ class History_view(wx.Frame):
         df_ideal = self.df[self.df['name'] == '$IDEAL VALUE$']
         item = self.lst.GetStringSelection()
         self.axes.clear()
-        # self.figure.texts.clear()
-
-        if item == "Overall score":
-            try:
-                self.get_score_list(self.cur_choice)
-            except:
-                self.axes.imshow(self.no_hist_img)
-                self.canvas.draw()
-            return
 
         try:
-            self.draw_figure(self.cur_choice, item, df_name, df_ideal)
+            if item == "Overall score":
+                self.get_score_list(self.cur_choice)
+            else:
+                self.draw_figure(self.cur_choice, item, df_name, df_ideal)
         except:
-            self.axes.imshow(self.no_hist_img)
+            self.axes.imshow(self.no_hist_img, aspect='auto')
             self.canvas.draw()
 
 
     def update_figure_pat(self):
         df_name = self.df[self.df['name'] == self.info.name]
-        # df_id = self.df[self.df['id'] == self.info.id]
         df_ideal = self.df[self.df['name'] == '$IDEAL VALUE$']
         item = self.lst.GetStringSelection()
         self.axes.clear()
 
+        # try:
         if item == "Overall score":
-            try:
-                self.get_score_list(self.info.name)
-            except:
-                self.axes.imshow(self.no_hist_img)
-                self.canvas.draw()
-            return
-
-        try:
+            self.get_score_list(self.info.name)
+        else:
             self.draw_figure(self.info.name, item, df_name, df_ideal)
-        except:
-            self.axes.imshow(self.no_hist_img)
-            self.canvas.draw()
+        # except:
+        #     self.axes.imshow(self.no_hist_img, aspect='auto')
+        #     self.canvas.draw()
 
     def find_min_max(self, y):
         y_min = sys.float_info.max
@@ -779,7 +993,7 @@ class History_view(wx.Frame):
                 continue
             if (y[i] < y_min):
                 y_min = y[i]
-            elif (y[i] > y_max):
+            if (y[i] > y_max):
                 y_max = y[i]
         if (y.size == 1):
             y_min = y[0]

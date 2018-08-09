@@ -249,8 +249,9 @@ class Msgbox(wx.Frame):
             result = dlg.ShowModal() == wx.ID_YES
 
             if result:
-                self.name = (self.fname + ' ' + self.lname).lower()
-                if self.isCli:
+                if (self.isPat):
+                    self.name = (self.fname + ' ' + self.lname).lower()
+                if (self.isCli):
                     self.name = (self.fcname + ' ' + self.lcname).lower()
                 dlg.Destroy()
                 self.Destroy()
@@ -299,10 +300,10 @@ class Msgbox(wx.Frame):
         self.button_cli.SetValue(False)
 
     def _pass(self):
-        # self.fname = 'Jane'
-        # self.lname = 'Doe'
-        self.fname = 'test'
-        self.lname = 'test'
+        self.fname = 'Jane'
+        self.lname = 'Doe'
+        # self.fname = 'test'
+        # self.lname = 'test'
         self.fcname = 'CliDefault'
         self.lcname = 'CliDefault'
         self.name = (self.fname + ' ' + self.lname).lower()
